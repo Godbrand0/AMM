@@ -2,6 +2,7 @@
 import { useStacks } from "@/hooks/use-stacks";
 import { abbreviateAddress } from "@/lib/stx-utils";
 import Link from "next/link";
+import { TokenBalance } from "@/components/token-balance";
 
 export function Navbar() {
   const { userData, connectWallet, disconnectWallet } = useStacks();
@@ -19,11 +20,15 @@ export function Navbar() {
         <Link href="/pools" className="text-gray-300 hover:text-gray-50">
           Pools
         </Link>
+        <Link href="/history" className="text-gray-300 hover:text-gray-50">
+          History
+        </Link>
       </div>
 
       <div className="flex items-center gap-2">
         {userData ? (
           <div className="flex items-center gap-2">
+            <TokenBalance userAddress={userData.profile.stxAddress.testnet} />
             <button
               type="button"
               className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
