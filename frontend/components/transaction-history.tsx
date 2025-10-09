@@ -104,8 +104,8 @@ export function TransactionHistory({ userAddress }: TransactionHistoryProps) {
       case "swap":
         return (
           <div className="text-sm text-gray-400">
-            Swapped {formatAmount(tx.amount0)} {tx.zeroForOne ? formatTokenName(tx.token0, "MT1") : formatTokenName(tx.token1, "MT2")}
-            {" → "} {tx.zeroForOne ? formatTokenName(tx.token1, "MT2") : formatTokenName(tx.token0, "MT1")}
+            Swapped {formatAmount(tx.amount0)} {tx.zeroForOne ? formatTokenName(tx.token0, "MT1") : formatTokenName(tx.token1, "MT1")}
+            {" → "} {tx.zeroForOne ? formatTokenName(tx.token1, "MT1") : formatTokenName(tx.token0, "MT2")}
           </div>
         );
       default:
