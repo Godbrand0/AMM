@@ -15,7 +15,7 @@ import {
 
 // REPLACE THESE WITH YOUR OWN
 const AMM_CONTRACT_ADDRESS = "ST262V9NFZ5TCQDQM1R2BSXSE84NJBXN61HM909Z0";
-const AMM_CONTRACT_NAME = "amm";
+const AMM_CONTRACT_NAME = "amm4";
 const AMM_CONTRACT_PRINCIPAL = `${AMM_CONTRACT_ADDRESS}.${AMM_CONTRACT_NAME}`;
 
 type ContractEvent = {
@@ -39,6 +39,10 @@ type PoolCV = {
   liquidity: UIntCV;
   "balance-0": UIntCV;
   "balance-1": UIntCV;
+  "total-volume-0": UIntCV;
+  "total-volume-1": UIntCV;
+  "total-fees-collected": UIntCV;
+  "swap-count": UIntCV;
 };
 
 export type Pool = {
@@ -49,6 +53,10 @@ export type Pool = {
   liquidity: number;
   "balance-0": number;
   "balance-1": number;
+  "total-volume-0": number;
+  "total-volume-1": number;
+  "total-fees-collected": number;
+  "swap-count": number;
 };
 
 // getAllPools
@@ -122,7 +130,16 @@ export async function getAllPools() {
       if (poolDataResult.value.type !== "some") continue;
       if (poolDataResult.value.value.type !== "tuple") continue;
 
-      const poolData = poolDataResult.value.value.value as PoolCV;
+      const poolData = poolDataResult.value.value.value as any;
+
+      // Helper to safely parse uint values
+      const parseUintCV = (cv: any): number => {
+        if (!cv) return 0;
+        if (cv.type === "uint") {
+          return Number(cv.value);
+        }
+        return 0;
+      };
 
       // convert the pool data to a Pool object
       const pool: Pool = {
@@ -130,9 +147,13 @@ export async function getAllPools() {
         "token-0": poolInitialData["token-0"].value,
         "token-1": poolInitialData["token-1"].value,
         fee: parseInt(poolInitialData["fee"].value.toString()),
-        liquidity: parseInt(poolData["liquidity"].value.toString()),
-        "balance-0": parseInt(poolData["balance-0"].value.toString()),
-        "balance-1": parseInt(poolData["balance-1"].value.toString()),
+        liquidity: Number(poolData["liquidity"].value),
+        "balance-0": Number(poolData["balance-0"].value),
+        "balance-1": Number(poolData["balance-1"].value),
+        "total-volume-0": parseUintCV(poolData["total-volume-0"]),
+        "total-volume-1": parseUintCV(poolData["total-volume-1"]),
+        "total-fees-collected": parseUintCV(poolData["total-fees-collected"]),
+        "swap-count": parseUintCV(poolData["swap-count"]),
       };
 
       pools.push(pool);
@@ -250,4 +271,177 @@ export async function getUserLiquidity(pool: Pool, user: string) {
   if (userLiquidityResult.type !== "ok") return 0;
   if (userLiquidityResult.value.type !== "uint") return 0;
   return parseInt(userLiquidityResult.value.value.toString());
+}
+
+export async function getTokenBalance(tokenContract: string, user: string) {
+  const [contractAddress, contractName] = tokenContract.split(".");
+
+  const balanceResult = await fetchCallReadOnlyFunction({
+    contractAddress,
+    contractName,
+    functionName: "get-balance",
+    functionArgs: [principalCV(user)],
+    senderAddress: user,
+    network: STACKS_TESTNET,
+  });
+
+  if (balanceResult.type !== "ok") return 0;
+  if (balanceResult.value.type !== "uint") return 0;
+  return parseInt(balanceResult.value.value.toString());
+}
+
+export type Transaction = {
+  txId: string;
+  action: string;
+  timestamp: number;
+  blockHeight: number;
+  token0?: string;
+  token1?: string;
+  amount0?: number;
+  amount1?: number;
+  liquidity?: number;
+  fee?: number;
+  zeroForOne?: boolean;
+  sender: string;
+};
+
+export async function getUserTransactionHistory(userAddress: string): Promise<Transaction[]> {
+  const transactions: Transaction[] = [];
+  let offset = 0;
+  let totalFetched = 0;
+  const maxTransactions = 100; // Limit to 100 most recent transactions
+
+  try {
+    while (totalFetched < maxTransactions) {
+      const url = `https://api.testnet.hiro.so/extended/v1/address/${userAddress}/transactions?limit=50&offset=${offset}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (!data.results || data.results.length === 0) break;
+
+      for (const tx of data.results) {
+        // Only process successful transactions
+        if (tx.tx_status !== "success") continue;
+
+        // Only process contract calls to our AMM
+        if (tx.tx_type !== "contract_call") continue;
+        if (tx.contract_call?.contract_id !== AMM_CONTRACT_PRINCIPAL) continue;
+
+        const functionName = tx.contract_call.function_name;
+
+        // Parse transaction based on function called
+        let transaction: Transaction = {
+          txId: tx.tx_id,
+          action: functionName,
+          timestamp: tx.burn_block_time,
+          blockHeight: tx.block_height,
+          sender: tx.sender_address,
+        };
+
+        // Get transaction details from events
+        if (tx.events && tx.events.length > 0) {
+          for (const event of tx.events) {
+            if (event.event_type === "smart_contract_log" && event.contract_log) {
+              const logData = hexToCV(event.contract_log.value.hex);
+              if (logData.type === "tuple") {
+                const data = logData.value["data"];
+                if (data && data.type === "tuple") {
+                  const eventData = data.value;
+
+                  // Extract amounts and other data based on action
+                  const amount0 = eventData["amount-0"];
+                  if (amount0 && amount0.type === "uint") {
+                    transaction.amount0 = parseInt(amount0.value.toString());
+                  }
+                  const amount1 = eventData["amount-1"];
+                  if (amount1 && amount1.type === "uint") {
+                    transaction.amount1 = parseInt(amount1.value.toString());
+                  }
+                  const liquidity = eventData["liquidity"];
+                  if (liquidity && liquidity.type === "uint") {
+                    transaction.liquidity = parseInt(liquidity.value.toString());
+                  }
+                  const fee = eventData["fee"];
+                  if (fee && fee.type === "uint") {
+                    transaction.fee = parseInt(fee.value.toString());
+                  }
+                  const zeroForOne = eventData["zero-for-one"];
+                  if (zeroForOne && "value" in zeroForOne) {
+                    const val = (zeroForOne as any).value;
+                    if (typeof val === "boolean") {
+                      transaction.zeroForOne = val;
+                    }
+                  }
+                  const token0 = eventData["token-0"];
+                  if (token0 && "value" in token0) {
+                    const val = (token0 as any).value;
+                    if (typeof val === "string") {
+                      transaction.token0 = val;
+                    }
+                  }
+                  const token1 = eventData["token-1"];
+                  if (token1 && "value" in token1) {
+                    const val = (token1 as any).value;
+                    if (typeof val === "string") {
+                      transaction.token1 = val;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Parse from function args (most reliable source)
+        if (tx.contract_call.function_args) {
+          const args = tx.contract_call.function_args;
+
+          // Extract token principals - always in first two args for all AMM functions
+          if (!transaction.token0 && args[0] && args[0].type === "principal") {
+            transaction.token0 = args[0].value;
+          }
+          if (!transaction.token1 && args[1] && args[1].type === "principal") {
+            transaction.token1 = args[1].value;
+          }
+
+          // Helper function to parse uint values from repr
+          const parseUint = (repr: string): number => {
+            // Remove 'u' prefix if present (e.g., "u1000000" -> "1000000")
+            const cleanValue = repr.replace(/^u/, '');
+            return parseInt(cleanValue, 10);
+          };
+
+          // Parse amounts based on function name
+          if (functionName === "create-pool" && args[2]) {
+            if (!transaction.fee) transaction.fee = parseUint(args[2].repr);
+          } else if (functionName === "add-liquidity") {
+            if (!transaction.amount0 && args[3]) transaction.amount0 = parseUint(args[3].repr);
+            if (!transaction.amount1 && args[4]) transaction.amount1 = parseUint(args[4].repr);
+          } else if (functionName === "remove-liquidity" && args[3]) {
+            if (!transaction.liquidity) transaction.liquidity = parseUint(args[3].repr);
+          } else if (functionName === "swap") {
+            if (!transaction.amount0 && args[3]) transaction.amount0 = parseUint(args[3].repr);
+            if (!transaction.zeroForOne && args[4] && args[4].type === "bool") {
+              transaction.zeroForOne = args[4].value;
+            }
+          }
+        }
+
+        transactions.push(transaction);
+        totalFetched++;
+
+        if (totalFetched >= maxTransactions) break;
+      }
+
+      offset += 50;
+
+      // If we got less than 50 results, we've reached the end
+      if (data.results.length < 50) break;
+    }
+
+    return transactions;
+  } catch (error) {
+    console.error("Error fetching transaction history:", error);
+    return [];
+  }
 }

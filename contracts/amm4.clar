@@ -22,14 +22,20 @@
 ;; mappings
 (define-map pools
     (buff 20) ;; Pool ID (hash of Token0 + Token1 + Fee)
-    { 
+    {
         token-0: principal,
         token-1: principal,
         fee: uint,
 
         liquidity: uint,
         balance-0: uint,
-        balance-1: uint
+        balance-1: uint,
+
+        ;; Pool statistics
+        total-volume-0: uint,
+        total-volume-1: uint,
+        total-fees-collected: uint,
+        swap-count: uint
     }
 )
 
@@ -103,7 +109,12 @@
             fee: (get fee pool-info),
             liquidity: u0, ;; initially, liquidity is 0
             balance-0: u0, ;; initially, balance-0 (x) is 0
-            balance-1: u0 ;; initially, balance-1 (y) is 0
+            balance-1: u0, ;; initially, balance-1 (y) is 0
+            ;; Initialize statistics to 0
+            total-volume-0: u0,
+            total-volume-1: u0,
+            total-fees-collected: u0,
+            swap-count: u0
         })
     ) 
 
@@ -369,6 +380,18 @@
             ;; compute the new balances of the pool after the swap
             (balance-0-post-swap (if zero-for-one (+ balance-0 input-amount) (- balance-0 output-amount-sub-fees)))
             (balance-1-post-swap (if zero-for-one (- balance-1 output-amount-sub-fees) (+ balance-1 input-amount)))
+
+            ;; Get current statistics
+            (current-volume-0 (get total-volume-0 pool-data))
+            (current-volume-1 (get total-volume-1 pool-data))
+            (current-fees (get total-fees-collected pool-data))
+            (current-swap-count (get swap-count pool-data))
+
+            ;; Update statistics based on swap direction
+            (new-volume-0 (if zero-for-one (+ current-volume-0 input-amount) current-volume-0))
+            (new-volume-1 (if zero-for-one current-volume-1 (+ current-volume-1 input-amount)))
+            (new-fees (+ current-fees fees))
+            (new-swap-count (+ current-swap-count u1))
         )
 
         ;; make sure user is swapping >0 tokens
@@ -383,10 +406,14 @@
         ;; transfer output token from pool to user
         (try! (as-contract (contract-call? output-token transfer output-amount-sub-fees THIS_CONTRACT sender none)))
 
-        ;; update pool balances (x and y)
+        ;; update pool balances (x and y) and statistics
         (map-set pools pool-id (merge pool-data {
             balance-0: balance-0-post-swap,
-            balance-1: balance-1-post-swap
+            balance-1: balance-1-post-swap,
+            total-volume-0: new-volume-0,
+            total-volume-1: new-volume-1,
+            total-fees-collected: new-fees,
+            swap-count: new-swap-count
         }))
 
         (print { action: "swap", pool-id: pool-id, input-amount: input-amount })
