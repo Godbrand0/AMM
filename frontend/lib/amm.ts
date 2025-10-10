@@ -15,7 +15,7 @@ import {
 
 // REPLACE THESE WITH YOUR OWN
 const AMM_CONTRACT_ADDRESS = "ST262V9NFZ5TCQDQM1R2BSXSE84NJBXN61HM909Z0";
-const AMM_CONTRACT_NAME = "amm";
+const AMM_CONTRACT_NAME = "amm4";
 const AMM_CONTRACT_PRINCIPAL = `${AMM_CONTRACT_ADDRESS}.${AMM_CONTRACT_NAME}`;
 
 type ContractEvent = {
@@ -39,6 +39,10 @@ type PoolCV = {
   liquidity: UIntCV;
   "balance-0": UIntCV;
   "balance-1": UIntCV;
+  "total-volume-0": UIntCV;
+  "total-volume-1": UIntCV;
+  "total-fees-collected": UIntCV;
+  "swap-count": UIntCV;
 };
 
 export type Pool = {
@@ -49,6 +53,10 @@ export type Pool = {
   liquidity: number;
   "balance-0": number;
   "balance-1": number;
+  "total-volume-0": number;
+  "total-volume-1": number;
+  "total-fees-collected": number;
+  "swap-count": number;
 };
 
 // getAllPools
@@ -122,7 +130,16 @@ export async function getAllPools() {
       if (poolDataResult.value.type !== "some") continue;
       if (poolDataResult.value.value.type !== "tuple") continue;
 
-      const poolData = poolDataResult.value.value.value as PoolCV;
+      const poolData = poolDataResult.value.value.value as any;
+
+      // Helper to safely parse uint values
+      const parseUintCV = (cv: any): number => {
+        if (!cv) return 0;
+        if (cv.type === "uint") {
+          return Number(cv.value);
+        }
+        return 0;
+      };
 
       // convert the pool data to a Pool object
       const pool: Pool = {
@@ -130,9 +147,13 @@ export async function getAllPools() {
         "token-0": poolInitialData["token-0"].value,
         "token-1": poolInitialData["token-1"].value,
         fee: parseInt(poolInitialData["fee"].value.toString()),
-        liquidity: parseInt(poolData["liquidity"].value.toString()),
-        "balance-0": parseInt(poolData["balance-0"].value.toString()),
-        "balance-1": parseInt(poolData["balance-1"].value.toString()),
+        liquidity: Number(poolData["liquidity"].value),
+        "balance-0": Number(poolData["balance-0"].value),
+        "balance-1": Number(poolData["balance-1"].value),
+        "total-volume-0": parseUintCV(poolData["total-volume-0"]),
+        "total-volume-1": parseUintCV(poolData["total-volume-1"]),
+        "total-fees-collected": parseUintCV(poolData["total-fees-collected"]),
+        "swap-count": parseUintCV(poolData["swap-count"]),
       };
 
       pools.push(pool);

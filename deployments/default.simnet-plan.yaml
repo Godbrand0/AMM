@@ -67,25 +67,25 @@ plan:
             emulated-sender: SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE
             path: "./.cache/requirements/SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard.clar"
             clarity-version: 1
-      epoch: "2.1"
+      epoch: "2.0"
     - id: 1
       transactions:
         - emulated-contract-publish:
-            contract-name: mock-token-2
+            contract-name: mock-token-6
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/mock-token.clar
+            path: contracts/mock-token6.clar
             clarity-version: 2
       epoch: "2.5"
     - id: 2
       transactions:
         - emulated-contract-publish:
-            contract-name: amm
+            contract-name: amm4
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/amm.clar
+            path: contracts/amm4.clar
             clarity-version: 3
         - emulated-contract-publish:
-            contract-name: mock-token
+            contract-name: mock-token-7
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/mock-token.clar
+            path: contracts/mock-token6.clar
             clarity-version: 3
       epoch: "3.2"

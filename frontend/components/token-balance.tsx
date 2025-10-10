@@ -12,8 +12,8 @@ export function TokenBalance({ userAddress }: TokenBalanceProps) {
   const [loading, setLoading] = useState(true);
 
   // Replace these with your actual deployed token contract addresses
-  const TOKEN1_CONTRACT = "ST262V9NFZ5TCQDQM1R2BSXSE84NJBXN61HM909Z0.mock-token";
-  const TOKEN2_CONTRACT = "ST262V9NFZ5TCQDQM1R2BSXSE84NJBXN61HM909Z0.mock-token-2";
+  const TOKEN1_CONTRACT = "ST262V9NFZ5TCQDQM1R2BSXSE84NJBXN61HM909Z0.mock-token-6";
+  const TOKEN2_CONTRACT = "ST262V9NFZ5TCQDQM1R2BSXSE84NJBXN61HM909Z0.mock-token-7";
 
   useEffect(() => {
     async function fetchBalances() {
