@@ -2,6 +2,8 @@
 
 This document outlines the features added to the AMM (Automated Market Maker) project, including smart contract changes, frontend integration, and issues encountered during development.
 
+https://explorer.hiro.so/txid/0xb850e567d8bf95540a1bf05c375e4d13a8d14d92fa5efa0359b91bb278738526?chain=testnet
+
 ---
 
 ## Features Added
