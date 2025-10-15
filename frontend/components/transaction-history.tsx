@@ -6,6 +6,7 @@ interface TransactionHistoryProps {
   userAddress: string;
 }
 
+// this is the history component.
 export function TransactionHistory({ userAddress }: TransactionHistoryProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);

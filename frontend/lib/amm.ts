@@ -32,6 +32,7 @@ type ContractEvent = {
   };
 };
 
+// also updated these type definitions
 type PoolCV = {
   "token-0": PrincipalCV;
   "token-1": PrincipalCV;
@@ -142,6 +143,7 @@ export async function getAllPools() {
       };
 
       // convert the pool data to a Pool object
+      // updated the pool information
       const pool: Pool = {
         id: poolId,
         "token-0": poolInitialData["token-0"].value,
