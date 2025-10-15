@@ -111,6 +111,7 @@
             balance-0: u0, ;; initially, balance-0 (x) is 0
             balance-1: u0, ;; initially, balance-1 (y) is 0
             ;; Initialize statistics to 0
+            ;; I made changes to this
             total-volume-0: u0,
             total-volume-1: u0,
             total-fees-collected: u0,
@@ -382,6 +383,7 @@
             (balance-1-post-swap (if zero-for-one (- balance-1 output-amount-sub-fees) (+ balance-1 input-amount)))
 
             ;; Get current statistics
+            ;; and this
             (current-volume-0 (get total-volume-0 pool-data))
             (current-volume-1 (get total-volume-1 pool-data))
             (current-fees (get total-fees-collected pool-data))
@@ -407,6 +409,7 @@
         (try! (as-contract (contract-call? output-token transfer output-amount-sub-fees THIS_CONTRACT sender none)))
 
         ;; update pool balances (x and y) and statistics
+        ;; also updating the pool here
         (map-set pools pool-id (merge pool-data {
             balance-0: balance-0-post-swap,
             balance-1: balance-1-post-swap,
