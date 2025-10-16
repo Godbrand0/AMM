@@ -31,11 +31,11 @@
         balance-0: uint,
         balance-1: uint,
 
-        ;; Pool statistics
-        total-volume-0: uint,
-        total-volume-1: uint,
-        total-fees-collected: uint,
-        swap-count: uint
+        ;; Pool statistics - track trading activity and performance
+        total-volume-0: uint,      ;; Total volume traded of token-0
+        total-volume-1: uint,      ;; Total volume traded of token-1
+        total-fees-collected: uint, ;; Total fees collected by the pool
+        swap-count: uint           ;; Number of swaps executed in this pool
     }
 )
 
@@ -110,11 +110,13 @@
             liquidity: u0, ;; initially, liquidity is 0
             balance-0: u0, ;; initially, balance-0 (x) is 0
             balance-1: u0, ;; initially, balance-1 (y) is 0
-            ;; Initialize statistics to 0
-            total-volume-0: u0,
-            total-volume-1: u0,
-            total-fees-collected: u0,
-            swap-count: u0
+
+            ;; Initialize pool statistics to zero
+            ;; These will be updated as swaps occur
+            total-volume-0: u0,      ;; no trading volume yet
+            total-volume-1: u0,      ;; no trading volume yet
+            total-fees-collected: u0, ;; no fees collected yet
+            swap-count: u0           ;; no swaps executed yet
         })
     ) 
 
@@ -381,17 +383,23 @@
             (balance-0-post-swap (if zero-for-one (+ balance-0 input-amount) (- balance-0 output-amount-sub-fees)))
             (balance-1-post-swap (if zero-for-one (- balance-1 output-amount-sub-fees) (+ balance-1 input-amount)))
 
-            ;; Get current statistics
+            ;; Retrieve current pool statistics before updating
             (current-volume-0 (get total-volume-0 pool-data))
             (current-volume-1 (get total-volume-1 pool-data))
             (current-fees (get total-fees-collected pool-data))
             (current-swap-count (get swap-count pool-data))
 
-            ;; Update statistics based on swap direction
-            (new-volume-0 (if zero-for-one (+ current-volume-0 input-amount) current-volume-0))
-            (new-volume-1 (if zero-for-one current-volume-1 (+ current-volume-1 input-amount)))
-            (new-fees (+ current-fees fees))
-            (new-swap-count (+ current-swap-count u1))
+            ;; Calculate updated statistics based on swap direction
+            ;; If zero-for-one is true, user is selling token-0 for token-1
+            ;; If zero-for-one is false, user is selling token-1 for token-0
+            (new-volume-0 (if zero-for-one
+                            (+ current-volume-0 input-amount)
+                            current-volume-0))
+            (new-volume-1 (if zero-for-one
+                            current-volume-1
+                            (+ current-volume-1 input-amount)))
+            (new-fees (+ current-fees fees))           ;; Accumulate total fees
+            (new-swap-count (+ current-swap-count u1)) ;; Increment swap counter
         )
 
         ;; make sure user is swapping >0 tokens
@@ -406,14 +414,15 @@
         ;; transfer output token from pool to user
         (try! (as-contract (contract-call? output-token transfer output-amount-sub-fees THIS_CONTRACT sender none)))
 
-        ;; update pool balances (x and y) and statistics
+        ;; Update pool state with new balances and statistics
+        ;; This persists the swap results and tracks pool performance metrics
         (map-set pools pool-id (merge pool-data {
-            balance-0: balance-0-post-swap,
-            balance-1: balance-1-post-swap,
-            total-volume-0: new-volume-0,
-            total-volume-1: new-volume-1,
-            total-fees-collected: new-fees,
-            swap-count: new-swap-count
+            balance-0: balance-0-post-swap,        ;; Updated token-0 balance
+            balance-1: balance-1-post-swap,        ;; Updated token-1 balance
+            total-volume-0: new-volume-0,          ;; Cumulative volume for token-0
+            total-volume-1: new-volume-1,          ;; Cumulative volume for token-1
+            total-fees-collected: new-fees,        ;; Total fees earned by LPs
+            swap-count: new-swap-count             ;; Total number of swaps
         }))
 
         (print { action: "swap", pool-id: pool-id, input-amount: input-amount })

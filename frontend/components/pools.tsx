@@ -7,13 +7,15 @@ export interface PoolsListProps {
 
 export function PoolsList({ pools }: PoolsListProps) {
   return (
+    //also updated the pool here
     <div className="flex flex-col">
       <div className="grid grid-cols-7 place-items-center w-full bg-gray-900 justify-between p-4 font-semibold text-sm">
         <span>ID</span>
         <span>Token Pair</span>
         <span>Fee</span>
         <span>Liquidity</span>
-        <span>Total Volume</span>
+        
+        <span>Total Volume</span> 
         <span>Fees Collected</span>
         <span>Swaps</span>
       </div>
@@ -21,10 +23,12 @@ export function PoolsList({ pools }: PoolsListProps) {
         <PoolListItem
           key={`pool-${pool["token-0"]}-${pool["token-1"]}`}
           pool={pool}
+        
         />
       ))}
     </div>
   );
+  
 }
 
 export function PoolListItem({ pool }: { pool: Pool }) {

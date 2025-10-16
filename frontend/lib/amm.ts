@@ -32,6 +32,8 @@ type ContractEvent = {
   };
 };
 
+// Type definitions for pool data structures
+// Updated to include pool statistics tracking
 type PoolCV = {
   "token-0": PrincipalCV;
   "token-1": PrincipalCV;
@@ -39,6 +41,7 @@ type PoolCV = {
   liquidity: UIntCV;
   "balance-0": UIntCV;
   "balance-1": UIntCV;
+  // Pool statistics fields from smart contract
   "total-volume-0": UIntCV;
   "total-volume-1": UIntCV;
   "total-fees-collected": UIntCV;
@@ -53,10 +56,11 @@ export type Pool = {
   liquidity: number;
   "balance-0": number;
   "balance-1": number;
-  "total-volume-0": number;
-  "total-volume-1": number;
-  "total-fees-collected": number;
-  "swap-count": number;
+  // Pool performance metrics
+  "total-volume-0": number;      // Cumulative trading volume for token-0
+  "total-volume-1": number;      // Cumulative trading volume for token-1
+  "total-fees-collected": number; // Total fees earned by liquidity providers
+  "swap-count": number;          // Number of swaps executed in this pool
 };
 
 // getAllPools
@@ -132,7 +136,8 @@ export async function getAllPools() {
 
       const poolData = poolDataResult.value.value.value as any;
 
-      // Helper to safely parse uint values
+      // Helper function to safely parse uint clarity values
+      // Returns 0 if the value is undefined or not a uint type
       const parseUintCV = (cv: any): number => {
         if (!cv) return 0;
         if (cv.type === "uint") {
@@ -141,7 +146,8 @@ export async function getAllPools() {
         return 0;
       };
 
-      // convert the pool data to a Pool object
+      // Convert the pool data from Clarity values to JavaScript Pool object
+      // Includes both core pool data and statistics tracking fields
       const pool: Pool = {
         id: poolId,
         "token-0": poolInitialData["token-0"].value,
@@ -150,6 +156,7 @@ export async function getAllPools() {
         liquidity: Number(poolData["liquidity"].value),
         "balance-0": Number(poolData["balance-0"].value),
         "balance-1": Number(poolData["balance-1"].value),
+        // Parse pool statistics - safely handle undefined values
         "total-volume-0": parseUintCV(poolData["total-volume-0"]),
         "total-volume-1": parseUintCV(poolData["total-volume-1"]),
         "total-fees-collected": parseUintCV(poolData["total-fees-collected"]),
